@@ -49,7 +49,7 @@
       font-weight: 400;
       letter-spacing: 0.02em;
       line-height: 1.1;
-      font-family: 'Exp-0', serif;
+      will-change: opacity;
     }
 
     .layer-a, .layer-b {
@@ -78,44 +78,34 @@
       'Exp-p10','Exp-p20','Exp-p30','Exp-p40','Exp-p50',
       'Exp-p60','Exp-p70','Exp-p80','Exp-p90','Exp-p100'
     ];
+    const total = fonts.length;
 
-    // Preload all fonts
-    Promise.all(fonts.map(f => document.fonts.load(`1em "${f}"`))).then(start);
+    Promise.all(fonts.map(f => document.fonts.load(`clamp(3rem,10vw,8rem) "${f}"`))).then(start);
 
     function start() {
       const a = document.querySelector('.layer-a');
       const b = document.querySelector('.layer-b');
-      const total = fonts.length;
-      const cycleDuration = 6000; // full cycle in ms
-      const steps = (total - 1) * 2; // ping-pong steps
-      let prev = -1;
+      const duration = 6000;
 
       function tick(now) {
-        const t = (now % cycleDuration) / cycleDuration;
-        // Sine easing for smooth acceleration/deceleration at extremes
-        const sine = (Math.sin(t * Math.PI * 2 - Math.PI / 2) + 1) / 2;
-        const idx = Math.round(sine * (total - 1));
+        const t = (now % duration) / duration;
+        // Sine ping-pong: 0 -> 1 -> 0 smoothly
+        const v = (Math.sin(t * Math.PI * 2 - Math.PI / 2) + 1) / 2;
+        const pos = v * (total - 1);
+        const lo = Math.floor(pos);
+        const hi = Math.min(lo + 1, total - 1);
+        const frac = pos - lo;
 
-        if (idx !== prev) {
-          const next = (idx === prev) ? idx : idx;
-          const fontName = fonts[idx];
-          // Crossfade: incoming layer goes on top
-          const incoming = prev === -1 || idx > prev ? a : b;
-          const outgoing = incoming === a ? b : a;
+        // Layer A shows the lower font, Layer B shows the upper font
+        // Blend between them using opacity based on fractional position
+        a.style.fontFamily = `'${fonts[lo]}', serif`;
+        b.style.fontFamily = `'${fonts[hi]}', serif`;
+        a.style.opacity = 1 - frac;
+        b.style.opacity = frac;
 
-          incoming.style.fontFamily = `'${fontName}', serif`;
-          incoming.style.opacity = '1';
-          outgoing.style.opacity = '0';
-          incoming.style.transition = 'opacity 80ms ease';
-          outgoing.style.transition = 'opacity 80ms ease';
-
-          prev = idx;
-        }
         requestAnimationFrame(tick);
       }
 
-      a.style.opacity = '1';
-      b.style.opacity = '0';
       requestAnimationFrame(tick);
     }
   </script>
