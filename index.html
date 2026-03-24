@@ -96,19 +96,16 @@
         }
       }
       renderFrames();
-      window.addEventListener('resize', () => { resize(); renderFrames(); });
 
-      const blended = ctx.createImageData(canvas.width, canvas.height);
+      let blended = ctx.createImageData(canvas.width, canvas.height);
+
+      window.addEventListener('resize', () => {
+        resize();
+        renderFrames();
+        blended = ctx.createImageData(canvas.width, canvas.height);
+      });
 
       function tick(now) {
-        const w = canvas.width;
-        const h = canvas.height;
-
-        // Rebuild blended buffer if size changed
-        if (blended.width !== w || blended.height !== h) {
-          requestAnimationFrame(tick);
-          return;
-        }
 
         const t = (now % duration) / duration;
         const v = (Math.sin(t * Math.PI * 2 - Math.PI / 2) + 1) / 2;
