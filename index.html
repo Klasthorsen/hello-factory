@@ -5,20 +5,56 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hello Factory</title>
   <style>
+    @font-face { font-family: 'Exp-n100'; src: url('exposure/ExposureTrial[-100].otf'); }
+    @font-face { font-family: 'Exp-n80';  src: url('exposure/ExposureTrial[-80].otf'); }
+    @font-face { font-family: 'Exp-n60';  src: url('exposure/ExposureTrial[-60].otf'); }
+    @font-face { font-family: 'Exp-n40';  src: url('exposure/ExposureTrial[-40].otf'); }
+    @font-face { font-family: 'Exp-n20';  src: url('exposure/ExposureTrial[-20].otf'); }
+    @font-face { font-family: 'Exp-0';    src: url('exposure/ExposureTrial[0].otf'); }
+    @font-face { font-family: 'Exp-p20';  src: url('exposure/ExposureTrial[+20].otf'); }
+    @font-face { font-family: 'Exp-p40';  src: url('exposure/ExposureTrial[+40].otf'); }
+    @font-face { font-family: 'Exp-p60';  src: url('exposure/ExposureTrial[+60].otf'); }
+    @font-face { font-family: 'Exp-p80';  src: url('exposure/ExposureTrial[+80].otf'); }
+    @font-face { font-family: 'Exp-p100'; src: url('exposure/ExposureTrial[+100].otf'); }
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
+
     body {
-      font-family: system-ui, -apple-system, sans-serif;
       display: flex;
       align-items: center;
       justify-content: center;
       min-height: 100vh;
       background: #0a0a0a;
       color: #ededed;
+      overflow: hidden;
     }
-    h1 { font-size: 3rem; font-weight: 600; }
+
+    h1 {
+      font-size: clamp(3rem, 10vw, 8rem);
+      font-weight: 400;
+      letter-spacing: 0.02em;
+      text-align: center;
+      font-family: 'Exp-0', serif;
+    }
   </style>
 </head>
 <body>
   <h1>Hello Factory</h1>
+  <script>
+    const steps = [
+      'Exp-n100','Exp-n80','Exp-n60','Exp-n40','Exp-n20',
+      'Exp-0',
+      'Exp-p20','Exp-p40','Exp-p60','Exp-p80','Exp-p100',
+      'Exp-p80','Exp-p60','Exp-p40','Exp-p20',
+      'Exp-0',
+      'Exp-n20','Exp-n40','Exp-n60','Exp-n80'
+    ];
+    const h1 = document.querySelector('h1');
+    let i = 0;
+    setInterval(() => {
+      h1.style.fontFamily = `'${steps[i]}', serif`;
+      i = (i + 1) % steps.length;
+    }, 150);
+  </script>
 </body>
 </html>
