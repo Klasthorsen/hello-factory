@@ -28,48 +28,19 @@
     @font-face { font-family: 'Exp-p100'; src: url('exposure/ExposureTrial[+100].otf'); }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
-
     body {
       display: flex;
       align-items: center;
       justify-content: center;
       min-height: 100vh;
       background: #0a0a0a;
-      color: #ededed;
       overflow: hidden;
     }
-
-    .stage {
-      position: relative;
-      text-align: center;
-    }
-
-    .layer {
-      font-size: clamp(3rem, 10vw, 8rem);
-      font-weight: 400;
-      letter-spacing: 0.02em;
-      line-height: 1.1;
-      will-change: opacity;
-    }
-
-    .layer-a, .layer-b {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-    }
-
-    .layer-ref {
-      visibility: hidden;
-    }
+    canvas { image-rendering: auto; }
   </style>
 </head>
 <body>
-  <div class="stage">
-    <h1 class="layer layer-ref">Gain exposure.<br>Make an impact.<br>BE SEEN.</h1>
-    <h1 class="layer layer-a" aria-hidden="true">Gain exposure.<br>Make an impact.<br>BE SEEN.</h1>
-    <h1 class="layer layer-b" aria-hidden="true">Gain exposure.<br>Make an impact.<br>BE SEEN.</h1>
-  </div>
+  <canvas id="c"></canvas>
   <script>
     const fonts = [
       'Exp-n100','Exp-n90','Exp-n80','Exp-n70','Exp-n60',
@@ -79,30 +50,87 @@
       'Exp-p60','Exp-p70','Exp-p80','Exp-p90','Exp-p100'
     ];
     const total = fonts.length;
+    const lines = ['Gain exposure.', 'Make an impact.', 'BE SEEN.'];
+    const duration = 6000;
+    const dpr = window.devicePixelRatio || 1;
 
-    Promise.all(fonts.map(f => document.fonts.load(`clamp(3rem,10vw,8rem) "${f}"`))).then(start);
+    Promise.all(fonts.map(f => document.fonts.load(`100px "${f}"`))).then(init);
 
-    function start() {
-      const a = document.querySelector('.layer-a');
-      const b = document.querySelector('.layer-b');
-      const duration = 6000;
+    function init() {
+      const canvas = document.getElementById('c');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+      function resize() {
+        canvas.width = window.innerWidth * dpr;
+        canvas.height = window.innerHeight * dpr;
+        canvas.style.width = window.innerWidth + 'px';
+        canvas.style.height = window.innerHeight + 'px';
+      }
+      resize();
+      window.addEventListener('resize', resize);
+
+      const fontSize = () => Math.min(window.innerWidth * 0.1, 128) * dpr;
+
+      // Pre-render all steps into offscreen canvases
+      let frames = [];
+      function renderFrames() {
+        frames = [];
+        const w = canvas.width;
+        const h = canvas.height;
+        const fs = fontSize();
+        const lineHeight = fs * 1.15;
+        const totalTextH = lines.length * lineHeight;
+        const startY = (h - totalTextH) / 2 + fs * 0.85;
+
+        for (let i = 0; i < total; i++) {
+          const off = new OffscreenCanvas(w, h);
+          const oc = off.getContext('2d');
+          oc.fillStyle = '#ededed';
+          oc.textAlign = 'center';
+          oc.textBaseline = 'alphabetic';
+          oc.font = `${fs}px '${fonts[i]}', serif`;
+          for (let l = 0; l < lines.length; l++) {
+            oc.fillText(lines[l], w / 2, startY + l * lineHeight);
+          }
+          frames.push(oc.getImageData(0, 0, w, h));
+        }
+      }
+      renderFrames();
+      window.addEventListener('resize', () => { resize(); renderFrames(); });
+
+      const blended = ctx.createImageData(canvas.width, canvas.height);
 
       function tick(now) {
+        const w = canvas.width;
+        const h = canvas.height;
+
+        // Rebuild blended buffer if size changed
+        if (blended.width !== w || blended.height !== h) {
+          requestAnimationFrame(tick);
+          return;
+        }
+
         const t = (now % duration) / duration;
-        // Sine ping-pong: 0 -> 1 -> 0 smoothly
         const v = (Math.sin(t * Math.PI * 2 - Math.PI / 2) + 1) / 2;
         const pos = v * (total - 1);
         const lo = Math.floor(pos);
         const hi = Math.min(lo + 1, total - 1);
         const frac = pos - lo;
+        const invFrac = 1 - frac;
 
-        // Layer A shows the lower font, Layer B shows the upper font
-        // Blend between them using opacity based on fractional position
-        a.style.fontFamily = `'${fonts[lo]}', serif`;
-        b.style.fontFamily = `'${fonts[hi]}', serif`;
-        a.style.opacity = 1 - frac;
-        b.style.opacity = frac;
+        const dA = frames[lo].data;
+        const dB = frames[hi].data;
+        const out = blended.data;
+        const len = out.length;
 
+        for (let i = 0; i < len; i += 4) {
+          out[i]     = dA[i]     * invFrac + dB[i]     * frac;
+          out[i + 1] = dA[i + 1] * invFrac + dB[i + 1] * frac;
+          out[i + 2] = dA[i + 2] * invFrac + dB[i + 2] * frac;
+          out[i + 3] = dA[i + 3] * invFrac + dB[i + 3] * frac;
+        }
+
+        ctx.putImageData(blended, 0, 0);
         requestAnimationFrame(tick);
       }
 
